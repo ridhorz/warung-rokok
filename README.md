@@ -1,33 +1,36 @@
-# Warung Rokok - Point of Sale System
+# 🚬 Warung Rokok - Point of Sale System
 
-Aplikasi Point of Sale berbasis web untuk manajemen toko rokok.
+Aplikasi Point of Sale (POS) berbasis web untuk manajemen toko rokok.
+> **Live Demo :** [https://ridhorz.github.io/warung-rokok-pos](https://ridhorz.github.io/warung-rokok-pos)
 
-**Live Demo:** [https://ridhorz.github.io/warung-rokok-pos](https://ridhorz.github.io/warung-rokok-pos)
+## ✨ Fitur
 
-## Fitur
+- 🧱 **Manajemen Produk (CRUD)** — tambah, edit, hapus, dan lihat produk dengan mudah
+- 🛒 **Keranjang & Checkout** — sistem belanja interaktif dan simpel
+- 📊 **Dashboard Analitik** — grafik penjualan dan statistik toko
+- 🌗 **Mode Gelap/Terang** — sesuaikan tampilan sesuai preferensi
+- 📱 **Responsive Design** — tampil rapi di semua perangkat
+- 💾 **Penyimpanan Lokal** — data tersimpan otomatis di LocalStorage
 
-- Manajemen produk (CRUD)
-- Keranjang belanja dan checkout
-- Dashboard dengan chart analitik
-- Mode gelap/terang
-- Responsive design
-- Data tersimpan di LocalStorage
+## 💻 Language
 
-## Language
+- **HTML5**  
+- **CSS3**  
+- **JavaScript (Vanilla)**  
 
-HTML5, CSS3, JavaScript (Vanilla)
+## 🏷️ Kode Kupon
 
-## Kode Kupon
+| Kode | Diskon |
+|------|--------|
+| `HEMAT10` | 10% |
+| `DISKON20` | 20% |
+| `GILA50` | 50% |
+| `PROMO15` | 15% |
 
-- HEMAT10: Diskon 10%
-- DISKON20: Diskon 20%
-- GILA50: Diskon 50%
-- PROMO15: Diskon 15%
+## ⚖️ License
 
-## License
-
-MIT License
+**MIT License**.
 
 ---
 
-Redho Rizkiansyah | [@ridhorz](https://github.com/ridhorz)
+**Created by [Redho Rizkiansyah](https://github.com/ridhorz)**
