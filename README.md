@@ -27,10 +27,6 @@ Aplikasi Point of Sale (POS) berbasis web untuk manajemen toko rokok.
 | `GILA50` | 50% |
 | `PROMO15` | 15% |
 
-## ⚖️ License
-
-**MIT License**.
-
 ---
 
-**Created by [Redho Rizkiansyah](https://github.com/ridhorz)**
+**© Created by [Redho Rizkiansyah](https://github.com/ridhorz)**
