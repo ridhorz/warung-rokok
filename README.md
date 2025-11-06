@@ -13,18 +13,9 @@ Aplikasi Point of Sale berbasis web untuk manajemen toko rokok.
 - Responsive design
 - Data tersimpan di LocalStorage
 
-## Teknologi
+## Language
 
 HTML5, CSS3, JavaScript (Vanilla)
-
-## Instalasi
-
-```bash
-git clone https://github.com/ridhorz/warung-rokok-pos.git
-cd warung-rokok-pos
-```
-
-Buka `index.html` di browser.
 
 ## Kode Kupon
 
@@ -33,7 +24,7 @@ Buka `index.html` di browser.
 - GILA50: Diskon 50%
 - PROMO15: Diskon 15%
 
-## Lisensi
+## License
 
 MIT License
 
