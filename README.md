@@ -5,12 +5,12 @@ Aplikasi Point of Sale (POS) berbasis web untuk manajemen toko rokok.
 
 ## ✨ Fitur
 
-- 🧱 **Manajemen Produk (CRUD)** — tambah, edit, hapus, dan lihat produk dengan mudah
-- 🛒 **Keranjang & Checkout** — sistem belanja interaktif dan simpel
-- 📊 **Dashboard Analitik** — grafik penjualan dan statistik toko
-- 🌗 **Mode Gelap/Terang** — sesuaikan tampilan sesuai preferensi
-- 📱 **Responsive Design** — tampil rapi di semua perangkat
-- 💾 **Penyimpanan Lokal** — data tersimpan otomatis di LocalStorage
+- 🧱 **Manajemen Produk (CRUD)** - tambah, edit, hapus, dan lihat produk dengan mudah
+- 🛒 **Keranjang & Checkout** - sistem belanja interaktif dan simpel
+- 📊 **Dashboard Analitik** - grafik penjualan dan statistik toko
+- 🌗 **Mode Gelap/Terang** - sesuaikan tampilan sesuai preferensi
+- 📱 **Responsive Design** - tampil rapi di semua perangkat
+- 💾 **Penyimpanan Lokal** - data tersimpan otomatis di LocalStorage
 
 ## 💻 Language
 
