@@ -1,3 +1,12 @@
+// Loading Screen Handler
+window.addEventListener('DOMContentLoaded', () => {
+  const loadingScreen = document.getElementById('loadingScreen');
+  
+  setTimeout(() => {
+    loadingScreen.classList.add('hidden');
+  }, 1200);
+});
+
 // Data dan Konfigurasi
 const LOW_STOCK_THRESHOLD = 20;
 const TOAST_DURATION = 2000;
@@ -238,12 +247,43 @@ const ProductManager = {
   save(event) {
     event.preventDefault();
 
+    const name = document.getElementById('productName').value.trim();
+    const pricePerBatang = parseInt(document.getElementById('pricePerBatang').value);
+    const pricePerBungkus = parseInt(document.getElementById('pricePerBungkus').value);
+    const stok = parseInt(document.getElementById('stok').value);
+    const isiPerBungkus = parseInt(document.getElementById('isiPerBungkus').value);
+    
+    if (!name || name.length < 3) {
+      Toast.error('Nama Tidak Valid', 'Nama produk minimal 3 karakter.');
+      return;
+    }
+    
+    if (isNaN(pricePerBatang) || pricePerBatang < 0) {
+      Toast.error('Harga Tidak Valid', 'Harga per batang harus angka positif.');
+      return;
+    }
+    
+    if (isNaN(pricePerBungkus) || pricePerBungkus < 0) {
+      Toast.error('Harga Tidak Valid', 'Harga per bungkus harus angka positif.');
+      return;
+    }
+    
+    if (isNaN(stok) || stok < 0) {
+      Toast.error('Stok Tidak Valid', 'Stok harus angka positif.');
+      return;
+    }
+    
+    if (isNaN(isiPerBungkus) || isiPerBungkus < 1) {
+      Toast.error('Isi Tidak Valid', 'Isi per bungkus minimal 1.');
+      return;
+    }
+
     const productData = {
-      name: document.getElementById('productName').value,
-      pricePerBatang: parseInt(document.getElementById('pricePerBatang').value),
-      pricePerBungkus: parseInt(document.getElementById('pricePerBungkus').value),
-      stok: parseInt(document.getElementById('stok').value),
-      isiPerBungkus: parseInt(document.getElementById('isiPerBungkus').value),
+      name,
+      pricePerBatang,
+      pricePerBungkus,
+      stok,
+      isiPerBungkus,
       nikotin: document.getElementById('nikotin').value,
       expired: document.getElementById('expired').value,
       kandungan: document.getElementById('kandungan').value,
@@ -293,6 +333,13 @@ const Coupon = {
   apply() {
     const code = document.getElementById('couponCode').value.trim().toUpperCase();
     const statusDiv = document.getElementById('couponStatus');
+    const couponInput = document.getElementById('couponCode');
+    const applyBtn = document.querySelector('button[onclick="Coupon.apply()"]');
+    
+    if (appliedCoupon) {
+      Toast.warning('Kupon Sudah Aktif', `Kupon ${appliedCoupon.code} sedang digunakan. Hapus dulu untuk ganti kupon.`);
+      return;
+    }
     
     if (!code) {
       statusDiv.innerHTML = `<p class="coupon-error">Masukkan kode kupon terlebih dahulu</p>`;
@@ -311,13 +358,25 @@ const Coupon = {
 
     appliedCoupon = { code, ...coupon };
     statusDiv.innerHTML = `<p class="coupon-success">${coupon.description} berhasil diterapkan</p>`;
+    
+    if (couponInput) couponInput.disabled = true;
+    if (applyBtn) applyBtn.disabled = true;
+    
     updateCartSummary();
     Toast.success('Kupon Diterapkan!', `${coupon.description} berhasil dipakai.`);
   },
 
   remove() {
     appliedCoupon = null;
-    document.getElementById('couponCode').value = '';
+    const couponInput = document.getElementById('couponCode');
+    const applyBtn = document.querySelector('button[onclick="Coupon.apply()"]');
+    
+    if (couponInput) {
+      couponInput.value = '';
+      couponInput.disabled = false;
+    }
+    if (applyBtn) applyBtn.disabled = false;
+    
     document.getElementById('couponStatus').innerHTML = '';
     updateCartSummary();
   },
@@ -410,100 +469,108 @@ const Dashboard = {
     const ctx = canvas.getContext('2d');
     const isDark = document.body.classList.contains('dark');
     
-    // Data - Top 5
     const data = Object.entries(productSales)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
     
-    // Setup canvas
-    canvas.width = canvas.offsetWidth * 2; // Retina display
+    canvas.width = canvas.offsetWidth * 2;
     canvas.height = canvas.offsetHeight * 2;
     ctx.scale(2, 2);
     const width = canvas.offsetWidth;
     const height = canvas.offsetHeight;
     
     if (data.length === 0) {
-      // Show empty state, hide canvas
       canvas.style.display = 'none';
       const emptyState = document.getElementById('salesChartEmpty');
       if (emptyState) emptyState.style.display = 'flex';
       return;
     }
     
-    // Show canvas, hide empty state
     canvas.style.display = 'block';
     const emptyState = document.getElementById('salesChartEmpty');
     if (emptyState) emptyState.style.display = 'none';
     
+    const totalSales = data.reduce((sum, item) => sum + item[1], 0);
     const maxValue = Math.max(...data.map(d => d[1]));
+    
     const colors = [
-      { main: '#3b82f6', light: '#93c5fd' },
-      { main: '#10b981', light: '#6ee7b7' },
-      { main: '#f59e0b', light: '#fcd34d' },
-      { main: '#ef4444', light: '#fca5a5' },
-      { main: '#8b5cf6', light: '#c4b5fd' }
+      { main: '#667eea', light: '#a5b4fc', shadow: 'rgba(102, 126, 234, 0.4)' },
+      { main: '#10b981', light: '#6ee7b7', shadow: 'rgba(16, 185, 129, 0.4)' },
+      { main: '#f59e0b', light: '#fcd34d', shadow: 'rgba(245, 158, 11, 0.4)' },
+      { main: '#ec4899', light: '#f9a8d4', shadow: 'rgba(236, 72, 153, 0.4)' },
+      { main: '#8b5cf6', light: '#c4b5fd', shadow: 'rgba(139, 92, 246, 0.4)' }
     ];
     
-    const padding = 40;
-    const chartHeight = height - padding - 50;
-    const chartWidth = width - padding * 2;
-    const barWidth = (chartWidth / data.length) * 0.7;
+    const padding = { left: 45, right: 20, top: 35, bottom: 60 };
+    const chartHeight = height - padding.top - padding.bottom;
+    const chartWidth = width - padding.left - padding.right;
+    const barWidth = Math.min((chartWidth / data.length) * 0.65, 60);
     const spacing = chartWidth / data.length;
     
-    // Draw grid lines
-    ctx.strokeStyle = isDark ? '#374151' : '#e5e7eb';
+    ctx.strokeStyle = isDark ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.8)';
     ctx.lineWidth = 1;
-    for (let i = 0; i <= 5; i++) {
-      const y = padding + (chartHeight / 5) * i;
+    ctx.setLineDash([5, 5]);
+    
+    for (let i = 0; i <= 4; i++) {
+      const y = padding.top + (chartHeight / 4) * i;
       ctx.beginPath();
-      ctx.moveTo(padding, y);
-      ctx.lineTo(width - padding, y);
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(width - padding.right, y);
       ctx.stroke();
       
-      // Y-axis labels
-      const value = Math.round(maxValue * (1 - i / 5));
+      const value = Math.round(maxValue * (1 - i / 4));
       ctx.fillStyle = isDark ? '#9ca3af' : '#6b7280';
-      ctx.font = '11px sans-serif';
+      ctx.font = '600 11px system-ui';
       ctx.textAlign = 'right';
-      ctx.fillText(value, padding - 8, y + 4);
+      ctx.fillText(value, padding.left - 10, y + 4);
     }
+    ctx.setLineDash([]);
     
-    // Draw bars with gradient
     data.forEach((item, index) => {
       const [name, value] = item;
+      const percentage = ((value / totalSales) * 100).toFixed(1);
       const barHeight = (value / maxValue) * chartHeight;
-      const x = padding + spacing * index + (spacing - barWidth) / 2;
-      const y = height - padding - 30 - barHeight;
+      const x = padding.left + spacing * index + (spacing - barWidth) / 2;
+      const y = padding.top + chartHeight - barHeight;
       
-      // Gradient bar
       const gradient = ctx.createLinearGradient(x, y, x, y + barHeight);
       gradient.addColorStop(0, colors[index].light);
       gradient.addColorStop(1, colors[index].main);
       ctx.fillStyle = gradient;
+      ctx.shadowColor = colors[index].shadow;
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetY = 5;
       
-      // Rounded rectangle
-      const radius = 4;
       ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + barWidth - radius, y);
-      ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius);
-      ctx.lineTo(x + barWidth, y + barHeight);
-      ctx.lineTo(x, y + barHeight);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.roundRect(x, y, barWidth, barHeight, [8, 8, 0, 0]);
       ctx.fill();
       
-      // Value on top
-      ctx.fillStyle = isDark ? '#f3f4f6' : '#111827';
-      ctx.font = 'bold 13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(value, x + barWidth / 2, y - 8);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
       
-      // Product name
-      ctx.font = '12px sans-serif';
+      ctx.fillStyle = isDark ? '#ffffff' : '#111827';
+      ctx.font = '600 12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(value, x + barWidth / 2, y - 16);
+      
+      ctx.fillStyle = colors[index].main;
+      ctx.font = '500 10px system-ui';
+      ctx.fillText(`${percentage}%`, x + barWidth / 2, y - 4);
+      
+      ctx.save();
+      ctx.translate(x + barWidth / 2, padding.top + chartHeight + 15);
       ctx.fillStyle = isDark ? '#d1d5db' : '#4b5563';
-      const shortName = name.length > 10 ? name.substring(0, 10) + '...' : name;
-      ctx.fillText(shortName, x + barWidth / 2, height - padding - 10);
+      ctx.font = '500 11px system-ui';
+      ctx.textAlign = 'center';
+      const displayName = name.length > 12 ? name.substring(0, 12) + '...' : name;
+      ctx.fillText(displayName, 0, 0);
+      ctx.restore();
+      
+      ctx.fillStyle = isDark ? '#9ca3af' : '#6b7280';
+      ctx.font = '400 9px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('bungkus', x + barWidth / 2, padding.top + chartHeight + 28);
     });
   },
 
@@ -567,75 +634,107 @@ const Dashboard = {
       ctx.fillText(`Rp${(value / 1000).toFixed(0)}k`, padding.left - 8, y + 4);
     }
     
-    // Draw gradient fill area
     const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
-    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.05)');
+    gradient.addColorStop(0, isDark ? 'rgba(102, 126, 234, 0.35)' : 'rgba(102, 126, 234, 0.25)');
+    gradient.addColorStop(0.5, isDark ? 'rgba(118, 75, 162, 0.25)' : 'rgba(118, 75, 162, 0.15)');
+    gradient.addColorStop(1, 'rgba(240, 147, 251, 0.05)');
+    
     ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.moveTo(padding.left, height - padding.bottom);
+    
     dataPoints.forEach((point, index) => {
       const x = padding.left + (index / (dataPoints.length - 1 || 1)) * graphWidth;
       const y = padding.top + (1 - point.value / maxValue) * graphHeight;
       if (index === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      else {
+        const prevX = padding.left + ((index - 1) / (dataPoints.length - 1 || 1)) * graphWidth;
+        const prevY = padding.top + (1 - dataPoints[index - 1].value / maxValue) * graphHeight;
+        const cpX = (prevX + x) / 2;
+        ctx.quadraticCurveTo(cpX, prevY, x, y);
+      }
     });
+    
     ctx.lineTo(width - padding.right, height - padding.bottom);
     ctx.lineTo(padding.left, height - padding.bottom);
     ctx.closePath();
     ctx.fill();
     
-    // Draw main line with shadow
-    ctx.shadowColor = 'rgba(59, 130, 246, 0.3)';
-    ctx.shadowBlur = 8;
-    ctx.strokeStyle = '#3b82f6';
+    const lineGradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+    lineGradient.addColorStop(0, '#667eea');
+    lineGradient.addColorStop(0.5, '#764ba2');
+    lineGradient.addColorStop(1, '#f093fb');
+    
+    ctx.strokeStyle = lineGradient;
     ctx.lineWidth = 3;
+    ctx.shadowColor = isDark ? 'rgba(102, 126, 234, 0.5)' : 'rgba(102, 126, 234, 0.4)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 2;
+    
     ctx.beginPath();
     dataPoints.forEach((point, index) => {
       const x = padding.left + (index / (dataPoints.length - 1 || 1)) * graphWidth;
       const y = padding.top + (1 - point.value / maxValue) * graphHeight;
       if (index === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      else {
+        const prevX = padding.left + ((index - 1) / (dataPoints.length - 1 || 1)) * graphWidth;
+        const prevY = padding.top + (1 - dataPoints[index - 1].value / maxValue) * graphHeight;
+        const cpX = (prevX + x) / 2;
+        ctx.quadraticCurveTo(cpX, prevY, x, y);
+      }
     });
     ctx.stroke();
-    ctx.shadowBlur = 0;
     
-    // Draw points with white center
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    
     dataPoints.forEach((point, index) => {
       const x = padding.left + (index / (dataPoints.length - 1 || 1)) * graphWidth;
       const y = padding.top + (1 - point.value / maxValue) * graphHeight;
       
-      // Outer circle
-      ctx.fillStyle = '#3b82f6';
+      ctx.fillStyle = '#667eea';
+      ctx.shadowColor = 'rgba(102, 126, 234, 0.4)';
+      ctx.shadowBlur = 8;
       ctx.beginPath();
-      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
       ctx.fill();
       
-      // Inner circle
+      ctx.shadowBlur = 0;
       ctx.fillStyle = isDark ? '#1f2937' : 'white';
       ctx.beginPath();
-      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
       ctx.fill();
-    });
-    
-    // X-axis labels (time)
-    ctx.fillStyle = isDark ? '#9ca3af' : '#6b7280';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'center';
-    const step = Math.ceil(dataPoints.length / 5);
-    dataPoints.forEach((point, index) => {
-      if (index % step === 0 || index === dataPoints.length - 1) {
-        const x = padding.left + (index / (dataPoints.length - 1 || 1)) * graphWidth;
-        const timeStr = point.time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-        ctx.fillText(timeStr, x, height - padding.bottom + 20);
+      
+      if (index === dataPoints.length - 1) {
+        ctx.fillStyle = isDark ? '#ffffff' : '#111827';
+        ctx.font = '600 10px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Rp${(point.value / 1000).toFixed(0)}k`, x, y - 12);
       }
     });
     
-    // Title
-    ctx.fillStyle = isDark ? '#d1d5db' : '#374151';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(`Total: Rp${maxValue.toLocaleString()}`, padding.left, padding.top - 10);
+    ctx.fillStyle = isDark ? '#9ca3af' : '#6b7280';
+    ctx.font = '500 10px system-ui';
+    ctx.textAlign = 'center';
+    
+    const maxLabels = 6;
+    const step = Math.max(1, Math.ceil(dataPoints.length / maxLabels));
+    
+    dataPoints.forEach((point, index) => {
+      if (index % step === 0 || index === dataPoints.length - 1) {
+        const x = padding.left + (index / (dataPoints.length - 1 || 1)) * graphWidth;
+        const timeStr = point.time.toLocaleTimeString('id-ID', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        ctx.fillText(timeStr, x, height - padding.bottom + 22);
+      }
+    });
+    
+    ctx.fillStyle = isDark ? '#f3f4f6' : '#111827';
+    ctx.font = '600 11px system-ui';
+    ctx.textAlign = 'right';
+    ctx.fillText(`Total: Rp${maxValue.toLocaleString('id-ID')}`, width - padding.right, padding.top + 15);
   }
 };
 
@@ -1158,9 +1257,22 @@ function updateCartSummary() {
 
 function checkout() {
   const cashInput = document.getElementById("cash");
-  const cash = parseFloat(cashInput.value) || 0;
+  const cashValue = cashInput.value.trim();
+  const cash = parseFloat(cashValue) || 0;
+  
+  if (!cashValue || cash <= 0) {
+    Toast.error('Input Tidak Valid', 'Silakan masukkan jumlah uang tunai yang valid.');
+    cashInput.focus();
+    return;
+  }
   
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  
+  if (total === 0 || cart.length === 0) {
+    Toast.warning('Keranjang Kosong', 'Silakan tambahkan produk terlebih dahulu.');
+    return;
+  }
+  
   let totalAfterDiscount = total * (1 - DISCOUNT / 100);
   
   let couponDiscount = 0;
@@ -1174,17 +1286,13 @@ function checkout() {
 
   receiptDiv.innerHTML = "";
 
-  if (cart.length === 0) {
-    Toast.warning('Keranjang Kosong', 'Silakan tambahkan produk terlebih dahulu.');
-    return;
-  }
-
   if (cash < totalAfterDiscount) {
     const kurang = totalAfterDiscount - cash;
     Toast.error(
       'Uang Tidak Cukup!', 
       `Kurang Rp${kurang.toLocaleString()}. Total: Rp${totalAfterDiscount.toLocaleString()}`
     );
+    cashInput.focus();
     return;
   }
 
@@ -1193,11 +1301,15 @@ function checkout() {
   const receiptItems = cart
     .map(
       (item) =>
-        `<li class="flex justify-between py-0.5">
-        <span>${item.name} (${item.type}) <span class="text-muted">×${
-          item.quantity
-        }</span></span>
-        <span>Rp${(item.price * item.quantity).toLocaleString()}</span>
+        `<li class="flex items-center gap-2 py-1.5 border-b" style="border-color: var(--border-light);">
+        <img src="${item.image || './images/default-product.png'}" alt="${item.name}" class="w-10 h-10 object-cover rounded" />
+        <div class="flex-1">
+          <div class="flex justify-between items-start">
+            <span class="text-xs font-medium">${item.name} (${item.type})</span>
+            <span class="text-xs font-semibold">Rp${(item.price * item.quantity).toLocaleString()}</span>
+          </div>
+          <span class="text-xs text-muted">×${item.quantity} @ Rp${item.price.toLocaleString()}</span>
+        </div>
     </li>`
     )
     .join("");
@@ -1206,42 +1318,63 @@ function checkout() {
   const borderColor = isDark ? "var(--border-dark)" : "var(--border-light)";
 
   const receiptContent = `
-    <div class="card-base p-4 mt-4 bg-opacity-50 animate-slide-fade-in print-receipt">
-      <div class="text-center mb-4 print-header">
-        <h4 class='text-lg font-bold'>Warung Rokok</h4>
-        <p class="text-xs text-muted">Jl. Contoh No. 123, Kota</p>
-        <p class="text-xs text-muted">Telp: 0812-3456-7890</p>
-        <div class="border-t mt-2 pt-2" style="border-color: ${borderColor};"></div>
+    <div class="card-base p-6 mt-4 animate-slide-fade-in print-receipt" style="background: ${isDark ? 'linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(17, 24, 39, 0.95) 100%)' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%)'}; backdrop-filter: blur(10px);">
+      <div class="text-center mb-6 print-header">
+        <div class="inline-block px-4 py-2 rounded-lg mb-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <h4 class='text-xl font-bold text-white'>Warung Rokok</h4>
+        </div>
+        <p class="text-xs text-muted mt-3">${new Date().toLocaleString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+        <div class="mt-3 h-px" style="background: linear-gradient(to right, transparent, ${borderColor}, transparent);"></div>
       </div>
       
-      <p class="text-xs text-muted mb-2">Tanggal: ${new Date().toLocaleString('id-ID')}</p>
+      <div class="mb-4">
+        <h5 class="text-xs font-semibold text-muted mb-3 uppercase tracking-wide">Detail Pembelian</h5>
+        <ul class="space-y-2">
+          ${receiptItems}
+        </ul>
+      </div>
       
-      <ul class="space-y-0.5 text-xs mb-3">
-        ${receiptItems}
-      </ul>
-      
-      <div class="border-t pt-3 space-y-1 text-sm" style="border-color: ${borderColor};">
-        <p class="flex justify-between text-muted"><span>Subtotal:</span> <span>Rp${total.toLocaleString()}</span></p>
+      <div class="pt-4 space-y-2" style="border-top: 2px dashed ${borderColor};">
+        <div class="flex justify-between text-sm">
+          <span class="text-muted">Subtotal</span>
+          <span class="font-medium">Rp${total.toLocaleString()}</span>
+        </div>
         ${
           DISCOUNT > 0
-            ? `<p class="flex justify-between text-danger-accent"><span>Diskon Toko (${DISCOUNT}%):</span> <span>- Rp${(total * (DISCOUNT / 100)).toLocaleString()}</span></p>`
+            ? `<div class="flex justify-between text-sm" style="color: #ef4444;">
+                <span>Diskon Toko (${DISCOUNT}%)</span>
+                <span class="font-medium">- Rp${(total * (DISCOUNT / 100)).toLocaleString()}</span>
+              </div>`
             : ""
         }
         ${
           appliedCoupon
-            ? `<p class="flex justify-between text-success-accent"><span>Kupon ${appliedCoupon.code} (${appliedCoupon.discount}%):</span> <span>- Rp${couponDiscount.toLocaleString()}</span></p>`
+            ? `<div class="flex justify-between text-sm" style="color: #10b981;">
+                <span>Kupon ${appliedCoupon.code} (${appliedCoupon.discount}%)</span>
+                <span class="font-medium">- Rp${couponDiscount.toLocaleString()}</span>
+              </div>`
             : ""
         }
-        <p class="flex justify-between font-semibold mt-1 pt-2 border-t" style="border-color: ${borderColor};">
-            <span>Total:</span> <span class="text-base">Rp${totalAfterDiscount.toLocaleString()}</span>
-        </p>
-        <p class="flex justify-between text-muted"><span>Tunai:</span> <span>Rp${cash.toLocaleString()}</span></p>
-        <p class="flex justify-between font-semibold"><span>Kembalian:</span> <span>Rp${change.toLocaleString()}</span></p>
+        <div class="pt-3 mt-3" style="border-top: 2px solid ${borderColor};">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-base font-bold">Total Pembayaran</span>
+            <span class="text-xl font-bold" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Rp${totalAfterDiscount.toLocaleString()}</span>
+          </div>
+          <div class="flex justify-between text-sm text-muted">
+            <span>Tunai</span>
+            <span>Rp${cash.toLocaleString()}</span>
+          </div>
+          <div class="flex justify-between text-base font-semibold mt-2 pt-2" style="border-top: 1px dashed ${borderColor};">
+            <span>Kembalian</span>
+            <span style="color: #10b981;">Rp${change.toLocaleString()}</span>
+          </div>
+        </div>
       </div>
       
-      <div class="text-center mt-4 pt-3 border-t" style="border-color: ${borderColor};">
-        <p class="text-xs text-muted">Terima kasih atas kunjungan Anda!</p>
-        <button onclick="printReceipt()" class="button-secondary text-xs py-1.5 px-4 mt-3 no-print">
+      <div class="text-center mt-6 pt-4" style="border-top: 1px solid ${borderColor};">
+        <p class="text-sm font-medium mb-1">Terima kasih atas kunjungan Anda!</p>
+        <p class="text-xs text-muted mb-4">Barang yang sudah dibeli tidak dapat dikembalikan</p>
+        <button onclick="printReceipt()" class="button-primary text-sm py-2 px-6 mt-2 no-print" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
           Print Struk
         </button>
       </div>
@@ -1294,56 +1427,68 @@ function renderHistory() {
       .reverse()
       .map(
         (h, i) => `
-      <li class='history-card animate-slide-fade-in' style="animation-delay: ${i * 40}ms">
-        <!-- Header -->
-        <div class="history-header">
-          <div class="history-badge">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" />
-            </svg>
-            <span>#${history.length - i}</span>
-          </div>
-          <div class="history-info">
-            <p class="history-date">${new Date(h.date).toLocaleDateString("id-ID", { 
-              day: "2-digit", 
-              month: "short", 
-              year: "numeric" 
-            })}</p>
-            <p class="history-time">${new Date(h.date).toLocaleTimeString("id-ID", { 
-              hour: "2-digit", 
-              minute: "2-digit" 
-            })}</p>
-          </div>
-          <div class="history-total">
-            <p class="history-total-label">Total</p>
-            <p class="history-total-value">Rp${h.total.toLocaleString()}</p>
-          </div>
-        </div>
-        
-        <!-- Items -->
-        <div class="history-items">
-          ${h.items.map(item => `
-            <div class="history-item">
-              <div class="history-item-info">
-                <p class="history-item-name">${item.name}</p>
-                <p class="history-item-detail">${item.type} × ${item.quantity}</p>
+      <li class='card-base overflow-hidden animate-slide-fade-in' style="animation-delay: ${i * 40}ms; background: ${isDark ? 'linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(17, 24, 39, 0.95) 100%)' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%)'}; backdrop-filter: blur(12px);">
+        <div class="p-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <div class="flex items-center justify-between text-white">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-white bg-opacity-20">
+                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                  <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
               </div>
-              <p class="history-item-price">Rp${(item.price * item.quantity).toLocaleString()}</p>
+              <div>
+                <p class="text-lg font-bold">#${history.length - i}</p>
+                <p class="text-xs opacity-90">${new Date(h.date).toLocaleString("id-ID", { 
+                  day: "numeric", 
+                  month: "short", 
+                  year: "numeric",
+                  hour: "2-digit", 
+                  minute: "2-digit" 
+                })}</p>
+              </div>
             </div>
-          `).join("")}
+            <div class="text-right">
+              <p class="text-xs opacity-75">Total</p>
+              <p class="text-2xl font-bold">Rp${h.total.toLocaleString()}</p>
+            </div>
+          </div>
         </div>
         
-        <!-- Footer -->
-        <div class="history-footer">
-          <div class="history-payment">
-            <div class="history-payment-row">
-              <span>Tunai</span>
-              <span>Rp${h.cash.toLocaleString()}</span>
+        <div class="p-4">
+          <div class="space-y-2 mb-4">
+            ${h.items.map(item => `
+              <div class="flex items-center gap-3 p-3 rounded-lg transition-all hover:scale-[1.02]" style="background: ${isDark ? 'rgba(55, 65, 81, 0.5)' : 'rgba(243, 244, 246, 0.8)'}; border: 1px solid ${borderColor};">
+                <img src="${item.image || './images/default-product.png'}" alt="${item.name}" class="w-14 h-14 object-cover rounded-lg shadow-md" />
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-bold truncate">${item.name}</p>
+                  <p class="text-xs text-muted">${item.type}</p>
+                  <p class="text-xs text-muted mt-1">Rp${item.price.toLocaleString()} × ${item.quantity}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-base font-bold whitespace-nowrap">Rp${(item.price * item.quantity).toLocaleString()}</p>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+          
+          <div class="space-y-2 pt-3" style="border-top: 2px dashed ${borderColor};">
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-muted">Tunai</span>
+              <span class="font-semibold">Rp${h.cash.toLocaleString()}</span>
             </div>
-            <div class="history-payment-row highlight">
-              <span>Kembalian</span>
-              <span>Rp${h.change.toLocaleString()}</span>
+            <div class="flex justify-between items-center">
+              <span class="font-bold">Kembalian</span>
+              <span class="text-lg font-bold" style="color: #10b981;">Rp${h.change.toLocaleString()}</span>
             </div>
+            ${h.coupon ? `
+            <div class="mt-3 p-2 rounded-lg flex items-center gap-2" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border: 1px solid rgba(16, 185, 129, 0.3);">
+              <svg class="w-5 h-5 flex-shrink-0" style="color: #10b981;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clip-rule="evenodd" />
+              </svg>
+              <span class="text-sm font-semibold" style="color: #10b981;">Kupon ${h.coupon} digunakan</span>
+            </div>
+            ` : ''}
           </div>
         </div>
       </li>`
@@ -1424,4 +1569,81 @@ window.addEventListener("load", () => {
   
   // Initial product count
   updateProductCount(products.length);
+  
+  // Keyboard Shortcuts
+  setupKeyboardShortcuts();
 });
+
+// Keyboard Shortcuts Handler
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + K: Focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+    }
+    
+    // Escape: Close modals and clear search
+    if (e.key === 'Escape') {
+      const modals = document.querySelectorAll('.modal');
+      let modalClosed = false;
+      
+      modals.forEach(modal => {
+        if (modal.style.display === 'flex') {
+          modal.style.display = 'none';
+          modalClosed = true;
+        }
+      });
+      
+      if (!modalClosed) {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput && searchInput.value) {
+          searchInput.value = '';
+          searchInput.dispatchEvent(new Event('input'));
+        }
+      }
+    }
+    
+    // Ctrl/Cmd + N: Open add product modal
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+      e.preventDefault();
+      if (typeof ProductManager !== 'undefined') {
+        ProductManager.openAddModal();
+      }
+    }
+    
+    // Ctrl/Cmd + B: Focus checkout
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+      e.preventDefault();
+      const checkoutSection = document.getElementById('checkout');
+      if (checkoutSection) {
+        checkoutSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const cashInput = document.getElementById('cashInput');
+        if (cashInput) {
+          setTimeout(() => cashInput.focus(), 300);
+        }
+      }
+    }
+    
+    // Ctrl/Cmd + H: Toggle history
+    if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+      e.preventDefault();
+      const historySection = document.getElementById('history');
+      if (historySection) {
+        historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+    
+    // Ctrl/Cmd + D: Toggle dark mode
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+      e.preventDefault();
+      if (typeof toggleTheme !== 'undefined') {
+        toggleTheme();
+      }
+    }
+  });
+}
