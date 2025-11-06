@@ -1,7 +1,7 @@
 # 🚬 Warung Rokok - Point of Sale System
 
 Aplikasi Point of Sale (POS) berbasis web untuk manajemen toko rokok.
-> **Live Demo :** [https://ridhorz.github.io/warung-rokok-pos](https://ridhorz.github.io/warung-rokok-pos)
+> **Live Demo :** [https://ridhorz.github.io/warung-rokok-pos](https://ridhorz.github.io/warung-rokok)
 
 ## ✨ Fitur
 
