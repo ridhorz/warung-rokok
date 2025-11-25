@@ -69,6 +69,110 @@ const COUPONS = {
   PROMO15: { discount: 15, description: 'Diskon 15%' }
 };
 
+// === CONFIRM MODAL SYSTEM ===
+const ConfirmModal = {
+  overlay: null,
+  
+  init() {
+    if (this.overlay) return;
+    
+    this.overlay = document.createElement('div');
+    this.overlay.className = 'confirm-modal-overlay';
+    this.overlay.innerHTML = `
+      <div class="confirm-modal">
+        <div class="confirm-modal-icon danger">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="confirm-modal-body">
+          <h3 class="confirm-modal-title">Konfirmasi</h3>
+          <p class="confirm-modal-message">Apakah Anda yakin?</p>
+        </div>
+        <div class="confirm-modal-actions">
+          <button class="confirm-btn-cancel">Batal</button>
+          <button class="confirm-btn-danger">Konfirmasi</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(this.overlay);
+    
+    // Close on overlay click
+    this.overlay.addEventListener('click', (e) => {
+      if (e.target === this.overlay) this.hide();
+    });
+    
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.overlay.classList.contains('show')) {
+        this.hide();
+      }
+    });
+  },
+  
+  show({ type = 'danger', title, message, confirmText = 'Konfirmasi', cancelText = 'Batal', onConfirm }) {
+    this.init();
+    
+    const iconEl = this.overlay.querySelector('.confirm-modal-icon');
+    const titleEl = this.overlay.querySelector('.confirm-modal-title');
+    const messageEl = this.overlay.querySelector('.confirm-modal-message');
+    const confirmBtn = this.overlay.querySelector('.confirm-btn-danger');
+    const cancelBtn = this.overlay.querySelector('.confirm-btn-cancel');
+    
+    // Update icon type
+    iconEl.className = `confirm-modal-icon ${type}`;
+    if (type === 'danger') {
+      iconEl.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+      `;
+    } else if (type === 'warning') {
+      iconEl.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      `;
+    }
+    
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    confirmBtn.textContent = confirmText;
+    cancelBtn.textContent = cancelText;
+    
+    // Remove old listeners
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    
+    // Add new listeners
+    newConfirmBtn.addEventListener('click', () => {
+      if (onConfirm) onConfirm();
+      this.hide();
+    });
+    
+    newCancelBtn.addEventListener('click', () => this.hide());
+    
+    // Show modal
+    this.overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  },
+  
+  hide() {
+    if (this.overlay) {
+      this.overlay.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+  }
+};
+
 // === TOAST NOTIFICATION SYSTEM ===
 const Toast = {
   container: null,
@@ -305,13 +409,24 @@ const ProductManager = {
   },
 
   delete(index) {
-    if (!confirm(`Yakin ingin menghapus ${products[index].name}?`)) return;
+    const product = products[index];
+    if (!product) return;
     
-    const productName = products[index].name;
-    products.splice(index, 1);
-    this.saveToLocalStorage();
-    renderProducts();
-    Toast.info('Produk Dihapus', `${productName} telah dihapus dari katalog.`);
+    const self = this;
+    ConfirmModal.show({
+      type: 'danger',
+      title: 'Hapus Produk?',
+      message: `Produk "${product.name}" akan dihapus dari katalog. Tindakan ini tidak dapat dibatalkan.`,
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+      onConfirm: () => {
+        const productName = products[index].name;
+        products.splice(index, 1);
+        self.saveToLocalStorage();
+        renderProducts();
+        Toast.info('Produk Dihapus', `${productName} telah dihapus dari katalog.`);
+      }
+    });
   },
 
   saveToLocalStorage() {
@@ -494,11 +609,11 @@ const Dashboard = {
     const maxValue = Math.max(...data.map(d => d[1]));
     
     const colors = [
-      { main: '#667eea', light: '#a5b4fc', shadow: 'rgba(102, 126, 234, 0.4)' },
-      { main: '#10b981', light: '#6ee7b7', shadow: 'rgba(16, 185, 129, 0.4)' },
-      { main: '#f59e0b', light: '#fcd34d', shadow: 'rgba(245, 158, 11, 0.4)' },
-      { main: '#ec4899', light: '#f9a8d4', shadow: 'rgba(236, 72, 153, 0.4)' },
-      { main: '#8b5cf6', light: '#c4b5fd', shadow: 'rgba(139, 92, 246, 0.4)' }
+      { main: '#d97706', light: '#fbbf24', shadow: 'rgba(217, 119, 6, 0.4)' },
+      { main: '#b45309', light: '#f59e0b', shadow: 'rgba(180, 83, 9, 0.4)' },
+      { main: '#92400e', light: '#d97706', shadow: 'rgba(146, 64, 14, 0.4)' },
+      { main: '#78350f', light: '#b45309', shadow: 'rgba(120, 53, 15, 0.4)' },
+      { main: '#451a03', light: '#92400e', shadow: 'rgba(69, 26, 3, 0.4)' }
     ];
     
     const padding = { left: 45, right: 20, top: 35, bottom: 60 };
@@ -635,9 +750,9 @@ const Dashboard = {
     }
     
     const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-    gradient.addColorStop(0, isDark ? 'rgba(102, 126, 234, 0.35)' : 'rgba(102, 126, 234, 0.25)');
-    gradient.addColorStop(0.5, isDark ? 'rgba(118, 75, 162, 0.25)' : 'rgba(118, 75, 162, 0.15)');
-    gradient.addColorStop(1, 'rgba(240, 147, 251, 0.05)');
+    gradient.addColorStop(0, isDark ? 'rgba(217, 119, 6, 0.35)' : 'rgba(217, 119, 6, 0.25)');
+    gradient.addColorStop(0.5, isDark ? 'rgba(180, 83, 9, 0.25)' : 'rgba(180, 83, 9, 0.15)');
+    gradient.addColorStop(1, 'rgba(146, 64, 14, 0.05)');
     
     ctx.fillStyle = gradient;
     ctx.beginPath();
@@ -661,13 +776,13 @@ const Dashboard = {
     ctx.fill();
     
     const lineGradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-    lineGradient.addColorStop(0, '#667eea');
-    lineGradient.addColorStop(0.5, '#764ba2');
-    lineGradient.addColorStop(1, '#f093fb');
+    lineGradient.addColorStop(0, '#d97706');
+    lineGradient.addColorStop(0.5, '#b45309');
+    lineGradient.addColorStop(1, '#92400e');
     
     ctx.strokeStyle = lineGradient;
     ctx.lineWidth = 3;
-    ctx.shadowColor = isDark ? 'rgba(102, 126, 234, 0.5)' : 'rgba(102, 126, 234, 0.4)';
+    ctx.shadowColor = isDark ? 'rgba(217, 119, 6, 0.5)' : 'rgba(217, 119, 6, 0.4)';
     ctx.shadowBlur = 12;
     ctx.shadowOffsetY = 2;
     
@@ -692,8 +807,8 @@ const Dashboard = {
       const x = padding.left + (index / (dataPoints.length - 1 || 1)) * graphWidth;
       const y = padding.top + (1 - point.value / maxValue) * graphHeight;
       
-      ctx.fillStyle = '#667eea';
-      ctx.shadowColor = 'rgba(102, 126, 234, 0.4)';
+      ctx.fillStyle = '#d97706';
+      ctx.shadowColor = 'rgba(217, 119, 6, 0.4)';
       ctx.shadowBlur = 8;
       ctx.beginPath();
       ctx.arc(x, y, 6, 0, Math.PI * 2);
@@ -775,9 +890,11 @@ function renderProducts(filteredList = products) {
   const isDark = document.body.classList.contains("dark");
   const borderColor = isDark ? "var(--border-dark)" : "var(--border-light)";
 
-  filteredList.forEach((product, index) => {
+  filteredList.forEach((product, filteredIndex) => {
+    // Cari index asli dari products array
+    const index = products.findIndex(p => p.name === product.name);
     const priceWithDiscount = product.pricePerBungkus * (1 - DISCOUNT / 100);
-    const animationDelay = `${index * 50}ms`;
+    const animationDelay = `${filteredIndex * 50}ms`;
 
     const cardDiv = document.createElement("div");
     cardDiv.className = "product-card animate-slide-fade-in";
@@ -879,19 +996,19 @@ function renderProducts(filteredList = products) {
                 <div class="quick-add-section">
                     ${hasInCart ? `
                     <div class="quantity-stepper">
-                        <button onclick="decreaseQuantity('${product.name}')" class="stepper-btn stepper-minus" title="Kurangi">
+                        <button onclick="decreaseQuantityByIndex(${index})" class="stepper-btn stepper-minus" title="Kurangi">
                             <span class="stepper-label">-</span>
                         </button>
                         <div class="stepper-display">
                             <span class="stepper-value">${cartQuantity}</span>
                             <span class="stepper-unit">bungkus</span>
                         </div>
-                        <button onclick="increaseQuantity('${product.name}')" class="stepper-btn stepper-plus" title="Tambah">
+                        <button onclick="increaseQuantityByIndex(${index})" class="stepper-btn stepper-plus" title="Tambah">
                             <span class="stepper-label">+</span>
                         </button>
                     </div>
                     ` : `
-                    <button onclick="quickAddToCart('${product.name}')" class="button-quick-add">
+                    <button onclick="quickAddToCartByIndex(${index}, event)" class="button-quick-add">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                         </svg>
@@ -987,7 +1104,7 @@ function clearSearch() {
 }
 
 // === FUNGSI QUICK ADD (TAMBAH CEPAT) ===
-function quickAddToCart(productName) {
+function quickAddToCart(productName, event) {
   const product = products.find((p) => p.name === productName);
   if (!product) {
     console.error("Produk tidak ditemukan:", productName);
@@ -1004,6 +1121,11 @@ function quickAddToCart(productName) {
   if (stockNeeded > product.stok) {
     Toast.error('Stok Tidak Cukup!', `${product.name} hanya tersisa ${product.stok} batang.`);
     return;
+  }
+
+  // Trigger fly animation if event exists
+  if (event && event.target) {
+    triggerFlyAnimation(event.target, product.image);
   }
 
   product.stok -= stockNeeded;
@@ -1024,8 +1146,42 @@ function quickAddToCart(productName) {
   renderCart();
   renderProducts();
   updateCartSummary();
+  
+  // Pulse cart badge
+  pulseCartBadge();
 
   Toast.success('Ditambahkan!', `${productName} berhasil ditambahkan.`);
+}
+
+// === FLY TO CART ANIMATION ===
+function triggerFlyAnimation(buttonEl, imageSrc) {
+  const cartBadge = document.getElementById('cartBadge');
+  if (!cartBadge) return;
+  
+  const buttonRect = buttonEl.getBoundingClientRect();
+  const cartRect = cartBadge.getBoundingClientRect();
+  
+  const flyEl = document.createElement('div');
+  flyEl.className = 'fly-to-cart';
+  flyEl.innerHTML = `<img src="${imageSrc}" alt="" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">`;
+  
+  flyEl.style.left = `${buttonRect.left + buttonRect.width / 2 - 25}px`;
+  flyEl.style.top = `${buttonRect.top}px`;
+  
+  document.body.appendChild(flyEl);
+  
+  setTimeout(() => {
+    flyEl.remove();
+  }, 600);
+}
+
+function pulseCartBadge() {
+  const cartBadge = document.getElementById('cartBadge');
+  if (cartBadge) {
+    cartBadge.classList.remove('cart-badge-pulse');
+    void cartBadge.offsetWidth; // Trigger reflow
+    cartBadge.classList.add('cart-badge-pulse');
+  }
 }
 
 // === FUNGSI INCREASE/DECREASE QUANTITY ===
@@ -1080,6 +1236,28 @@ function decreaseQuantity(productName) {
   updateCartSummary();
 }
 
+// === FUNGSI BY INDEX (untuk menghindari masalah escape karakter) ===
+function quickAddToCartByIndex(index, event) {
+  const product = products[index];
+  if (!product) {
+    console.error("Produk tidak ditemukan di index:", index);
+    return;
+  }
+  quickAddToCart(product.name, event);
+}
+
+function increaseQuantityByIndex(index) {
+  const product = products[index];
+  if (!product) return;
+  increaseQuantity(product.name);
+}
+
+function decreaseQuantityByIndex(index) {
+  const product = products[index];
+  if (!product) return;
+  decreaseQuantity(product.name);
+}
+
 // === FUNGSI LAMA (BACKUP) - Bisa dihapus nanti ===
 function addToCart(productName) {
   // Fungsi lama masih ada untuk compatibility
@@ -1096,13 +1274,16 @@ function renderCart() {
 
   if (cart.length === 0) {
     const emptyDiv = document.createElement("div");
-    emptyDiv.className = "text-center py-12";
+    emptyDiv.className = "empty-state";
     emptyDiv.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-muted opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="9" cy="21" r="1"/>
+        <circle cx="20" cy="21" r="1"/>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+        <path d="M12 9v6M9 12h6" stroke-dasharray="2 2"/>
       </svg>
-      <p class="text-muted text-sm">Keranjang masih kosong</p>
-      <p class="text-muted text-xs mt-1">Tambahkan produk untuk mulai belanja</p>
+      <p class="empty-state-title">Keranjang Kosong</p>
+      <p class="empty-state-desc">Pilih produk dari katalog untuk mulai berbelanja</p>
     `;
     fragment.appendChild(emptyDiv);
   } else {
@@ -1110,28 +1291,38 @@ function renderCart() {
       const li = document.createElement("li");
       li.className = "cart-item p-3 flex items-start gap-3";
       
+      // Add enter animation for new items
+      if (_lastAddedItemName === item.name && index === cart.length - 1) {
+        li.classList.add("cart-item-enter");
+      }
+      
       li.innerHTML = `
         <img src="${item.image}" alt="${
         item.name
-      }" class="w-16 h-16 object-cover rounded-md flex-shrink-0">
+      }" class="w-16 h-16 object-cover rounded-md flex-shrink-0 shadow-sm">
         <div class="flex-1 min-w-0">
           <p class="font-medium mb-1">${item.name}</p>
           <p class="text-xs text-muted mb-2">${item.type} × ${item.quantity}</p>
           <div class="flex items-center justify-between">
-            <p class="font-semibold">Rp${(
+            <p class="font-semibold text-primary-accent">Rp${(
               item.price * item.quantity
             ).toLocaleString()}</p>
-            <button onclick="handleRemoveFromCart(${index})" class="button-danger-text text-xs px-3 py-1.5" aria-label="Hapus ${
+            <button onclick="handleRemoveFromCart(${index})" class="button-danger-text text-xs px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors" aria-label="Hapus ${
         item.name
-      }">Hapus</button>
+      }">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+              Hapus
+            </button>
           </div>
         </div>
       `;
+      
       if (_lastAddedItemName === item.name && index === cart.length - 1) {
-        li.classList.add("item-highlight-enter");
         li.addEventListener(
           "animationend",
-          () => li.classList.remove("item-highlight-enter"),
+          () => li.classList.remove("cart-item-enter"),
           { once: true }
         );
         _lastAddedItemName = null;
@@ -1144,8 +1335,17 @@ function renderCart() {
 }
 
 function handleRemoveFromCart(index) {
-  // Langsung hapus tanpa animasi untuk performa optimal
-  proceedWithRemove(index);
+  if (index < 0 || index >= cart.length) return;
+  const item = cart[index];
+  
+  ConfirmModal.show({
+    type: 'warning',
+    title: 'Hapus dari Keranjang?',
+    message: `"${item.name}" akan dihapus dari keranjang belanja Anda.`,
+    confirmText: 'Ya, Hapus',
+    cancelText: 'Batal',
+    onConfirm: () => proceedWithRemove(index)
+  });
 }
 
 function proceedWithRemove(index) {
@@ -1211,6 +1411,66 @@ function updateCartSummary() {
   if (checkoutTotal) {
     checkoutTotal.textContent = `Rp${totalAfterDiscount.toLocaleString()}`;
   }
+  
+  // Update checkout items list (new professional design)
+  const checkoutItemsList = document.getElementById("checkoutItemsList");
+  if (checkoutItemsList) {
+    if (cart.length > 0) {
+      checkoutItemsList.innerHTML = cart.map(item => `
+        <div class="summary-item">
+          <div>
+            <div class="summary-item-name">${item.name}</div>
+            <div class="summary-item-qty">${item.quantity}x @ Rp${item.price.toLocaleString()}</div>
+          </div>
+          <div class="summary-item-price">Rp${(item.price * item.quantity).toLocaleString()}</div>
+        </div>
+      `).join('');
+    } else {
+      checkoutItemsList.innerHTML = `
+        <div class="summary-empty">
+          <svg class="summary-empty-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+          <p class="summary-empty-text">Keranjang kosong</p>
+        </div>
+      `;
+    }
+  }
+  
+  // Update subtotal
+  const checkoutSubtotal = document.getElementById("checkoutSubtotal");
+  if (checkoutSubtotal) {
+    checkoutSubtotal.textContent = `Rp${total.toLocaleString()}`;
+  }
+  
+  // Update discount row
+  const discountRow = document.getElementById("checkoutDiscountRow");
+  const discountEl = document.getElementById("checkoutDiscount");
+  if (discountRow && discountEl) {
+    if (DISCOUNT > 0 && total > 0) {
+      discountRow.style.display = 'flex';
+      discountEl.textContent = `-Rp${discountAmount.toLocaleString()}`;
+    } else {
+      discountRow.style.display = 'none';
+    }
+  }
+  
+  // Update coupon row
+  const couponRow = document.getElementById("checkoutCouponRow");
+  const couponLabel = document.getElementById("checkoutCouponLabel");
+  const couponDiscountEl = document.getElementById("checkoutCouponDiscount");
+  if (couponRow && couponLabel && couponDiscountEl) {
+    if (appliedCoupon && total > 0) {
+      couponRow.style.display = 'flex';
+      couponLabel.innerHTML = `Kupon ${appliedCoupon.code} <button onclick="Coupon.remove()" class="coupon-remove-btn">×</button>`;
+      couponDiscountEl.textContent = `-Rp${couponDiscount.toLocaleString()}`;
+    } else {
+      couponRow.style.display = 'none';
+    }
+  }
+  
+  // Update change calculation
+  updateChangeCalculation(totalAfterDiscount);
 
   const cartTotalDisplay = document.getElementById("cartTotalDisplay");
 
@@ -1255,10 +1515,72 @@ function updateCartSummary() {
   }
 }
 
+// Update change calculation in real-time
+function updateChangeCalculation(totalAfterDiscount) {
+  const cashInput = document.getElementById("cash");
+  const changeRow = document.getElementById("checkoutChangeRow");
+  const changeEl = document.getElementById("checkoutChange");
+  
+  if (!cashInput || !changeRow || !changeEl) return;
+  
+  const cashValue = cashInput.value.replace(/\D/g, '');
+  const cash = parseInt(cashValue) || 0;
+  
+  if (cash > 0 && cash >= totalAfterDiscount) {
+    const change = cash - totalAfterDiscount;
+    changeRow.style.display = 'flex';
+    changeEl.textContent = `Rp${change.toLocaleString()}`;
+  } else {
+    changeRow.style.display = 'none';
+  }
+}
+
+// Format cash input with thousand separator
+function formatCashInput(input) {
+  let value = input.value.replace(/\D/g, '');
+  if (value) {
+    input.value = parseInt(value).toLocaleString('id-ID');
+  }
+  
+  // Recalculate change
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  let totalAfterDiscount = total * (1 - DISCOUNT / 100);
+  if (appliedCoupon) {
+    totalAfterDiscount -= totalAfterDiscount * (appliedCoupon.discount / 100);
+  }
+  updateChangeCalculation(totalAfterDiscount);
+}
+
+// Set quick cash amount
+function setQuickCash(amount) {
+  const cashInput = document.getElementById("cash");
+  if (!cashInput) return;
+  
+  if (amount === 'exact') {
+    // Set exact amount
+    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    let totalAfterDiscount = total * (1 - DISCOUNT / 100);
+    if (appliedCoupon) {
+      totalAfterDiscount -= totalAfterDiscount * (appliedCoupon.discount / 100);
+    }
+    cashInput.value = Math.ceil(totalAfterDiscount).toLocaleString('id-ID');
+  } else {
+    cashInput.value = amount.toLocaleString('id-ID');
+  }
+  
+  // Trigger change calculation
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  let totalAfterDiscount = total * (1 - DISCOUNT / 100);
+  if (appliedCoupon) {
+    totalAfterDiscount -= totalAfterDiscount * (appliedCoupon.discount / 100);
+  }
+  updateChangeCalculation(totalAfterDiscount);
+}
+
 function checkout() {
   const cashInput = document.getElementById("cash");
-  const cashValue = cashInput.value.trim();
-  const cash = parseFloat(cashValue) || 0;
+  const cashValue = cashInput.value.replace(/\D/g, ''); // Remove formatting
+  const cash = parseInt(cashValue) || 0;
   
   if (!cashValue || cash <= 0) {
     Toast.error('Input Tidak Valid', 'Silakan masukkan jumlah uang tunai yang valid.');
@@ -1318,13 +1640,12 @@ function checkout() {
   const borderColor = isDark ? "var(--border-dark)" : "var(--border-light)";
 
   const receiptContent = `
-    <div class="card-base p-6 mt-4 animate-slide-fade-in print-receipt" style="background: ${isDark ? 'linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(17, 24, 39, 0.95) 100%)' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%)'}; backdrop-filter: blur(10px);">
-      <div class="text-center mb-6 print-header">
-        <div class="inline-block px-4 py-2 rounded-lg mb-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-          <h4 class='text-xl font-bold text-white'>Warung Rokok</h4>
+    <div class="card-base p-6 mt-4 animate-slide-fade-in print-receipt" style="background: ${isDark ? 'var(--surface-dark)' : 'var(--surface-light)'};">
+      <div class="text-center mb-5 print-header">
+        <div class="inline-block px-5 py-2.5 rounded-lg mb-2" style="background: linear-gradient(135deg, #292524 0%, #44403c 100%);">
+          <h4 class='text-lg font-bold text-white'>Warung Rokok</h4>
         </div>
-        <p class="text-xs text-muted mt-3">${new Date().toLocaleString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-        <div class="mt-3 h-px" style="background: linear-gradient(to right, transparent, ${borderColor}, transparent);"></div>
+        <p class="text-xs text-muted mt-2">${new Date().toLocaleString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
       </div>
       
       <div class="mb-4">
@@ -1334,7 +1655,7 @@ function checkout() {
         </ul>
       </div>
       
-      <div class="pt-4 space-y-2" style="border-top: 2px dashed ${borderColor};">
+      <div class="pt-4 space-y-2" style="border-top: 1px solid ${borderColor};">
         <div class="flex justify-between text-sm">
           <span class="text-muted">Subtotal</span>
           <span class="font-medium">Rp${total.toLocaleString()}</span>
@@ -1355,10 +1676,10 @@ function checkout() {
               </div>`
             : ""
         }
-        <div class="pt-3 mt-3" style="border-top: 2px solid ${borderColor};">
+        <div class="pt-3 mt-3" style="border-top: 1px solid ${borderColor};">
           <div class="flex justify-between items-center mb-3">
             <span class="text-base font-bold">Total Pembayaran</span>
-            <span class="text-xl font-bold" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Rp${totalAfterDiscount.toLocaleString()}</span>
+            <span class="text-xl font-bold" style="color: #d97706;">Rp${totalAfterDiscount.toLocaleString()}</span>
           </div>
           <div class="flex justify-between text-sm text-muted">
             <span>Tunai</span>
@@ -1371,10 +1692,10 @@ function checkout() {
         </div>
       </div>
       
-      <div class="text-center mt-6 pt-4" style="border-top: 1px solid ${borderColor};">
+      <div class="text-center mt-5 pt-4" style="border-top: 1px solid ${borderColor};">
         <p class="text-sm font-medium mb-1">Terima kasih atas kunjungan Anda!</p>
-        <p class="text-xs text-muted mb-4">Barang yang sudah dibeli tidak dapat dikembalikan</p>
-        <button onclick="printReceipt()" class="button-primary text-sm py-2 px-6 mt-2 no-print" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+        <p class="text-xs text-muted mb-3">Barang yang sudah dibeli tidak dapat dikembalikan</p>
+        <button onclick="printReceipt()" class="button-primary text-sm py-2 px-6 no-print">
           Print Struk
         </button>
       </div>
@@ -1427,19 +1748,19 @@ function renderHistory() {
       .reverse()
       .map(
         (h, i) => `
-      <li class='card-base overflow-hidden animate-slide-fade-in' style="animation-delay: ${i * 40}ms; background: ${isDark ? 'linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(17, 24, 39, 0.95) 100%)' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%)'}; backdrop-filter: blur(12px);">
-        <div class="p-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <li class='card-base overflow-hidden animate-slide-fade-in' style="animation-delay: ${i * 40}ms;">
+        <div class="p-3" style="background: linear-gradient(135deg, #292524 0%, #44403c 100%);">
           <div class="flex items-center justify-between text-white">
-            <div class="flex items-center gap-3">
-              <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-white bg-opacity-20">
-                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <div class="flex items-center gap-2.5">
+              <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-white bg-opacity-15">
+                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                   <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                 </svg>
               </div>
               <div>
-                <p class="text-lg font-bold">#${history.length - i}</p>
-                <p class="text-xs opacity-90">${new Date(h.date).toLocaleString("id-ID", { 
+                <p class="text-base font-bold">#${history.length - i}</p>
+                <p class="text-xs opacity-80">${new Date(h.date).toLocaleString("id-ID", { 
                   day: "numeric", 
                   month: "short", 
                   year: "numeric",
@@ -1449,44 +1770,43 @@ function renderHistory() {
               </div>
             </div>
             <div class="text-right">
-              <p class="text-xs opacity-75">Total</p>
-              <p class="text-2xl font-bold">Rp${h.total.toLocaleString()}</p>
+              <p class="text-xs opacity-70">Total</p>
+              <p class="text-lg font-bold" style="color: #fbbf24;">Rp${h.total.toLocaleString()}</p>
             </div>
           </div>
         </div>
         
-        <div class="p-4">
-          <div class="space-y-2 mb-4">
+        <div class="p-3">
+          <div class="space-y-2 mb-3">
             ${h.items.map(item => `
-              <div class="flex items-center gap-3 p-3 rounded-lg transition-all hover:scale-[1.02]" style="background: ${isDark ? 'rgba(55, 65, 81, 0.5)' : 'rgba(243, 244, 246, 0.8)'}; border: 1px solid ${borderColor};">
-                <img src="${item.image || './images/default-product.png'}" alt="${item.name}" class="w-14 h-14 object-cover rounded-lg shadow-md" />
+              <div class="flex items-center gap-2.5 p-2.5 rounded-lg" style="background: ${isDark ? 'rgba(55, 65, 81, 0.4)' : 'rgba(243, 244, 246, 0.6)'}; border: 1px solid ${borderColor};">
+                <img src="${item.image || './images/default-product.png'}" alt="${item.name}" class="w-10 h-10 object-cover rounded-md" />
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-bold truncate">${item.name}</p>
-                  <p class="text-xs text-muted">${item.type}</p>
-                  <p class="text-xs text-muted mt-1">Rp${item.price.toLocaleString()} × ${item.quantity}</p>
+                  <p class="text-sm font-semibold truncate">${item.name}</p>
+                  <p class="text-xs text-muted">Rp${item.price.toLocaleString()} × ${item.quantity}</p>
                 </div>
                 <div class="text-right">
-                  <p class="text-base font-bold whitespace-nowrap">Rp${(item.price * item.quantity).toLocaleString()}</p>
+                  <p class="text-sm font-bold whitespace-nowrap">Rp${(item.price * item.quantity).toLocaleString()}</p>
                 </div>
               </div>
             `).join("")}
           </div>
           
-          <div class="space-y-2 pt-3" style="border-top: 2px dashed ${borderColor};">
+          <div class="space-y-1.5 pt-2.5" style="border-top: 1px dashed ${borderColor};">
             <div class="flex justify-between items-center text-sm">
               <span class="text-muted">Tunai</span>
-              <span class="font-semibold">Rp${h.cash.toLocaleString()}</span>
+              <span class="font-medium">Rp${h.cash.toLocaleString()}</span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="font-bold">Kembalian</span>
-              <span class="text-lg font-bold" style="color: #10b981;">Rp${h.change.toLocaleString()}</span>
+              <span class="font-semibold">Kembalian</span>
+              <span class="font-bold" style="color: #10b981;">Rp${h.change.toLocaleString()}</span>
             </div>
             ${h.coupon ? `
-            <div class="mt-3 p-2 rounded-lg flex items-center gap-2" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border: 1px solid rgba(16, 185, 129, 0.3);">
-              <svg class="w-5 h-5 flex-shrink-0" style="color: #10b981;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <div class="mt-2 p-2 rounded-md flex items-center gap-2" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2);">
+              <svg class="w-4 h-4 flex-shrink-0" style="color: #10b981;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clip-rule="evenodd" />
               </svg>
-              <span class="text-sm font-semibold" style="color: #10b981;">Kupon ${h.coupon} digunakan</span>
+              <span class="text-xs font-medium" style="color: #10b981;">Kupon ${h.coupon}</span>
             </div>
             ` : ''}
           </div>
